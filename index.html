@@ -1,9 +1,9 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tic-Tac-Toe: ARAN Edition</title>
+  <title>Tic-Tac-Toe</title>
   <style>
     :root {
       --bg-color: #0f172a;
@@ -21,25 +21,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center; /* Centers content vertically */
       min-height: 100vh;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
+      box-sizing: border-box;
     }
 
     h1 {
       font-size: 3rem;
       text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
-      margin-bottom: 10px;
+      margin-bottom: 20px;
+      text-align: center;
     }
 
     #setup-area, #game-area {
       background: var(--card-bg);
-      padding: 30px;
+      padding: 20px;
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       max-width: 400px;
       width: 100%;
       text-align: center;
+      box-sizing: border-box;
     }
 
     .input-group {
@@ -75,12 +79,13 @@
     button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); }
 
     #winner-display {
-      font-size: 2.5rem;
+      font-size: 2rem;
       font-weight: 800;
       color: var(--accent);
       margin: 20px 0;
       display: none;
       animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
     }
 
     @keyframes pop {
@@ -90,15 +95,15 @@
 
     #board {
       display: grid;
-      grid-template-columns: repeat(3, 100px);
+      grid-template-columns: repeat(3, 1fr);
       grid-gap: 10px;
       justify-content: center;
-      margin: 20px 0;
+      margin: 20px auto;
+      max-width: 320px;
     }
 
     .cell {
-      width: 100px;
-      height: 100px;
+      aspect-ratio: 1 / 1;
       background: #334155;
       border-radius: 12px;
       font-size: 2.5rem;
@@ -112,6 +117,23 @@
     .cell.flash {
   animation: flashGlow 0.35s ease-out;
 }
+
+.cell.win {
+  background: linear-gradient(135deg, var(--accent), #fde68a);
+  color: #0f172a;
+  box-shadow:
+    0 0 30px rgba(251,191,36,1),
+    0 0 60px rgba(251,191,36,0.8);
+  animation: winGoldPulse 1.3s infinite ease-in-out;
+  transform: scale(1.1);
+}
+
+@keyframes winGoldPulse {
+  0%   { box-shadow: 0 0 22px rgba(251,191,36,0.7); }
+  50%  { box-shadow: 0 0 60px rgba(251,191,36,1); }
+  100% { box-shadow: 0 0 22px rgba(251,191,36,0.7); }
+}
+
 
 @keyframes flashGlow {
   0% {
@@ -128,8 +150,6 @@
   }
 }
 
-
-
     .cell:hover { background: #475569; }
     .cell.x { color: var(--primary); }
     .cell.o { color: var(--secondary); }
@@ -139,16 +159,21 @@
   display: flex;
   justify-content: space-between;
   margin: 15px 0;
+  gap: 10px;
 }
 
 .player-box {
-  width: 45%;
-  padding: 12px;
+  width: 48%;
+  padding: 10px 5px;
   background: #334155;
   border-radius: 12px;
   font-weight: bold;
   text-align: center;
   box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #player-left {
@@ -159,9 +184,8 @@
   color: var(--secondary);
 }
 
-
     #reset { background: #ef4444; margin-top: 20px; }
-    /* Loader Styles */
+
 #loader {
   position: fixed;
   inset: 0;
@@ -174,9 +198,10 @@
 
 .loader-card {
   background: var(--card-bg);
-  padding: 40px;
+  padding: 30px;
   border-radius: 20px;
-  width: 320px;
+  width: 80%;
+  max-width: 320px;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
@@ -211,6 +236,12 @@
   margin-top: 20px;
   font-size: 0.9rem;
   opacity: 0.8;
+}
+
+@media (max-width: 400px) {
+  h1 { font-size: 2.2rem; }
+  .cell { font-size: 2rem; }
+  #setup-area, #game-area { padding: 15px; }
 }
 
   </style>
@@ -289,7 +320,7 @@ let loaderInterval = setInterval(() => {
       loader.style.display = 'none';
     }, 300);
   }
-}, 50); // 50ms × 100 = 5 seconds
+}, 50); 
 
     const nameInputs = document.getElementById('name-inputs');
     const gameArea = document.getElementById('game-area');
@@ -301,22 +332,30 @@ let loaderInterval = setInterval(() => {
     let cells = Array(9).fill(null);
     let gameOver = false;
     let gameMode = ''; 
-    let aiLevel = 'aran'; // 'aran' | 'void' | 'torpid'
+    let aiLevel = 'aran'; 
     let player1 = "Player 1";
     let player2 = "ARAN";
 
     const winPatterns = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 
+    function getWinningPattern(boardState) {
+  for (let pattern of winPatterns) {
+    const [a, b, c] = pattern;
+    if (
+      boardState[a] &&
+      boardState[a] === boardState[b] &&
+      boardState[a] === boardState[c]
+    ) {
+      return pattern;
+    }
+  }
+  return null;
+}
+
    function showAIModes() {
   const modeSelection = document.getElementById('mode-selection');
-
-  // Show AI difficulty buttons
   document.getElementById('ai-modes').style.display = 'block';
-
-  // Hide Play AI button
   modeSelection.children[2].style.display = 'none';
-
-  // Hide 2 Players (Duo) button
   modeSelection.children[3].style.display = 'none';
 }
 
@@ -373,9 +412,8 @@ function selectAI(level) {
   if (cells[index] || gameOver) return;
 
   cells[index] = currentPlayer;
-  render(); // ✅ DOM is now fresh
+  render();
 
-  // ✅ Flash AFTER render
   const cellDiv = boardElement.children[index];
   if (cellDiv) {
     cellDiv.classList.add('flash');
@@ -410,7 +448,6 @@ function aiMove() {
     .map((v, i) => v === null ? i : null)
     .filter(v => v !== null);
 
-  // 1️⃣ Instant win if available
   for (let i of emptyCells) {
     cells[i] = 'O';
     if (checkWinner(cells) === 'O') {
@@ -421,7 +458,6 @@ function aiMove() {
     cells[i] = null;
   }
 
-  // 2️⃣ Immediate block (no mercy)
   for (let i of emptyCells) {
     cells[i] = 'X';
     if (checkWinner(cells) === 'X') {
@@ -432,7 +468,6 @@ function aiMove() {
     cells[i] = null;
   }
 
-  // 3️⃣ Strategic opening: center > corners > edges
   if (cells[4] === null) {
     handleClick(4);
     return;
@@ -444,7 +479,6 @@ function aiMove() {
     return;
   }
 
-  // 4️⃣ Fallback: full minimax (no randomness)
   let bestScore = -Infinity;
   let move;
 
@@ -468,7 +502,6 @@ function voidAIMove() {
     .map((v, i) => v === null ? i : null)
     .filter(v => v !== null);
 
-  // AI intentionally weak (VOID mode)
   if (Math.random() < 0.4) {
     handleClick(emptyCells[Math.floor(Math.random() * emptyCells.length)]);
     return;
@@ -495,7 +528,6 @@ function torpidAIMove() {
     .map((v, i) => v === null ? i : null)
     .filter(v => v !== null);
 
-  // Pure beginner logic: almost random
   let randomMove = emptyCells[Math.floor(Math.random() * emptyCells.length)];
   handleClick(randomMove);
 }
@@ -538,6 +570,17 @@ function minimax(boardState, depth, alpha, beta, isMaximizing) {
 }
 
     function endGame(winner) {
+const winPattern = getWinningPattern(cells);
+if (winPattern) {
+  winPattern.forEach(i => {
+    const cellDiv = boardElement.children[i];
+    if (cellDiv) {
+      cellDiv.classList.remove('flash');
+      cellDiv.classList.add('win');
+    }
+  });
+}
+
       gameOver = true;
       winnerDisplay.style.display = 'block';
       if (winner === 'Draw') {
@@ -566,6 +609,10 @@ function minimax(boardState, depth, alpha, beta, isMaximizing) {
       gameOver = false;
       winnerDisplay.style.display = 'none';
       status.textContent = `${player1}'s turn (X)`;
+      document.querySelectorAll('.cell').forEach(c => {
+  c.classList.remove('win', 'flash');
+});
+
       render();
     }
     function playAgain() {
@@ -575,39 +622,22 @@ function minimax(boardState, depth, alpha, beta, isMaximizing) {
       winnerDisplay.style.display = 'none';
       status.textContent = `${player1}'s turn (X)`;
       render();
-
-  // If AI starts second, no auto trigger
 }
 
     function resetToHome() {
-  // Hide game & winner
   gameArea.style.display = 'none';
   winnerDisplay.style.display = 'none';
-
-  // Show setup
   setupArea.style.display = 'block';
-
-  // Reset mode selection
   document.getElementById('mode-selection').style.display = 'block';
-
-  // Reset AI modes & buttons
   document.getElementById('ai-modes').style.display = 'none';
-  // Restore mode buttons
 const modeSelection = document.getElementById('mode-selection');
-modeSelection.children[2].style.display = 'inline-block'; // Play AI
-modeSelection.children[3].style.display = 'inline-block'; // 2 Players
-
-
-  // Reset name inputs
+modeSelection.children[2].style.display = 'inline-block';
+modeSelection.children[3].style.display = 'inline-block';
   nameInputs.style.display = 'none';
   document.getElementById('p2-group').style.display = 'block';
   document.getElementById('p1-label').textContent = 'Player 1 Name:';
-
-  // Clear input fields
   document.getElementById('p1-name').value = '';
   document.getElementById('p2-name').value = '';
-
-  // Reset internal state
   gameMode = '';
   aiLevel = 'aran';
   player1 = 'Player 1';
