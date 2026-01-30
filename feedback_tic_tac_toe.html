@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR Network House Feedback</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Segoe UI, sans-serif;
+  background: #eef2f7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 12px;
+}
+
+.card {
+  background: #ffffff;
+  max-width: 420px;
+  width: 100%;
+  padding: 26px;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+}
+
+.brand-logo {
+  width: 90px;
+  display: block;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+}
+
+h2 {
+  text-align: center;
+  color: #1a365d;
+  margin: 6px 0;
+}
+
+p {
+  text-align: center;
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 14px;
+  display: block;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 14px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid #dcdcdc;
+  font-size: 15px;
+  background: #fff;
+}
+
+.stars {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.stars input {
+  display: none;
+}
+
+.stars label {
+  font-size: 38px;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.stars input:checked ~ label,
+.stars label:hover,
+.stars label:hover ~ label {
+  color: #f6ad55;
+}
+
+button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  background: #1a365d;
+  color: white;
+  cursor: pointer;
+}
+
+/* SUCCESS OVERLAY */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.success-card {
+  background: #ffffff;
+  max-width: 360px;
+  width: 100%;
+  padding: 26px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.2);
+}
+
+.success-card h3 {
+  margin-top: 10px;
+  color: #1a365d;
+}
+
+.success-card p {
+  font-size: 14px;
+  margin-top: 8px;
+  color: #333;
+}
+
+.success-card button {
+  margin-top: 18px;
+  background: #1a365d;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.emoji {
+  font-size: 42px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <img src="https://github.com/arnetworkhouse-oss/ar-network-house/blob/main/ar%20logo.jpg?raw=true"
+       class="brand-logo">
+
+  <h2>AR Network House</h2>
+  <p>Please rate your experience with our services.</p>
+
+  <label>Your Name *</label>
+  <input id="name" placeholder="Enter your name">
+
+  <label>Rating *</label>
+  <div class="stars">
+    <input type="radio" id="r5" name="rating" value="5"><label for="r5">★</label>
+    <input type="radio" id="r4" name="rating" value="4"><label for="r4">★</label>
+    <input type="radio" id="r3" name="rating" value="3"><label for="r3">★</label>
+    <input type="radio" id="r2" name="rating" value="2"><label for="r2">★</label>
+    <input type="radio" id="r1" name="rating" value="1"><label for="r1">★</label>
+  </div>
+
+  <label for="pid">📝 Select Feedback Type (Optional)</label>
+<select id="pid">
+  <option value="">-- Choose Feedback Category --</option>
+  <option value="Bug Report">Bug Report</option>
+  <option value="Gameplay Issue">Gameplay Issue</option>
+  <option value="Graphics / Visuals">Graphics / Visuals</option>
+  <option value="Sound / Music">Sound / Music</option>
+  <option value="Performance / Lag">Performance / Lag</option>
+  <option value="Feature Request">Feature Request</option>
+  <option value="Other">Other</option>
+</select>
+
+
+  <label>Message (Optional)</label>
+  <textarea id="message" rows="4"></textarea>
+
+  <button onclick="submitFeedback()">Submit Feedback</button>
+
+  <footer style="text-align:center;margin-top:20px;font-size:12px;opacity:.7;">
+    Feedback year <span id="year"></span> ·
+    Contact us <a href="https://arnetworkhouse.in/"><strong>AR Network House</strong></a>
+  </footer>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="emoji" id="successEmoji"></div>
+    <h3 id="successTitle"></h3>
+    <p id="successMessage"></p>
+    <button onclick="location.reload()">Close</button>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyO5IpPQybjeLNm-Rq87PeuxG_tXmPeV7doakuutGTDv6srlW3ClsoxfdDI9LJhIj9X/exec";
+
+function submitFeedback() {
+  const name = document.getElementById("name").value.trim();
+  const ratingEl = document.querySelector("input[name='rating']:checked");
+  const projectId = document.getElementById("pid").value;
+  const message = document.getElementById("message").value;
+
+  if (!name || !ratingEl) {
+    alert("Name and rating are mandatory");
+    return;
+  }
+
+  const rating = Number(ratingEl.value);
+
+  fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      rating,
+      projectId,
+      message,
+      source: "TIC-TAC-TOE"
+    })
+  });
+
+  const emoji = document.getElementById("successEmoji");
+  const title = document.getElementById("successTitle");
+  const msg = document.getElementById("successMessage");
+
+  if (rating <= 2) {
+    emoji.innerText = "😔";
+    title.innerText = "We’re Sorry";
+    msg.innerText = "We apologize for the inconvenience. Your feedback has been logged and corrective action will be taken.";
+  } else if (rating === 3) {
+    emoji.innerText = "🙂";
+    title.innerText = "Thank You";
+    msg.innerText = "Thank you for your feedback. We value your input.";
+  } else if (rating === 4) {
+    emoji.innerText = "😊";
+    title.innerText = "Thank You So Much!";
+    msg.innerText = "We’re pleased to hear about your positive experience.";
+  } else {
+    emoji.innerText = "😊😊😊😊😊";
+    title.innerText = "Huge Appreciation!";
+    msg.innerText = "Thank you for your exceptional feedback. Your support is highly appreciated.";
+  }
+
+  document.getElementById("successOverlay").style.display = "flex";
+}
+
+document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
