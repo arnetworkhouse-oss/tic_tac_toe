@@ -279,7 +279,7 @@
         <div class="field"><label>Your Name</label><input type="text" id="online-name" placeholder="Enter name..."></div>
         <div style="display:flex;gap:10px;">
           <button class="btn btn-primary" style="flex:1" onclick="createRoom()">CREATE ROOM</button>
-          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="showJoinInput()">JOIN ROOM</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;border-color:var(--accent);color:var(--accent);box-shadow:0 0 18px rgba(255,215,0,0.35),inset 0 0 10px rgba(255,215,0,0.08);text-shadow:0 0 8px rgba(255,215,0,0.7);" onclick="showJoinInput()">JOIN ROOM</button>
         </div>
       </div>
 
@@ -537,11 +537,12 @@ function createRoom() {
 
   showRoomLoader();
 
+  const initBoard={0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:'',8:''};
   set(roomRef,{
     host:name, guest:null,
-    board:Array(9).fill(null),
+    board:initBoard,
     curPlayer:'X', gameOver:false,
-    winner:null, status:'waiting'
+    winner:'', status:'waiting'
   }).then(()=>{
     hideRoomLoader();
     document.getElementById('room-code-display').textContent=roomCode;
@@ -620,25 +621,39 @@ function syncBoardFromFirebase() {
   roomListener=onValue(roomRef,snap=>{
     const data=snap.val();
     if(!data) return;
-    const prevBoard=board.slice();
-    board=data.board||Array(9).fill(null);
-    curPlayer=data.curPlayer||'X';
-    const wasOver=gameOver;
-    gameOver=data.gameOver||false;
+
+    // Firebase can return arrays-with-nulls as plain objects {0:null,1:'X',...}
+    // We store nulls as '' to avoid Firebase stripping them; normalize back here
+    const rawBoard = data.board;
+    const normalizedBoard = Array.from({length:9}, (_,i) => {
+      const v = rawBoard && rawBoard[i] !== undefined ? rawBoard[i] : null;
+      return (v === '' || v === null || v === undefined) ? null : v;
+    });
+
+    const prevBoard = board.slice();
+    board = normalizedBoard;
+    curPlayer = data.curPlayer || 'X';
+    const wasOver = gameOver;
+    gameOver = data.gameOver || false;
+
     renderBoard();
     updatePlayerBar();
+
     // Animate newly placed cell
     for(let i=0;i<9;i++){
-      if(!prevBoard[i]&&board[i]){
+      if(!prevBoard[i] && board[i]){
         const cell=document.getElementById('board').children[i];
         if(cell) cell.classList.add('placed');
         break;
       }
     }
+
     // Win/draw — trigger only once (wasOver guard prevents re-firing)
-    if(data.status==='gameover'&&data.winner&&!wasOver){
-      gameOver=true;
-      endGame(data.winner);
+    // data.winner can be 'X', 'O', or 'Draw' ('' means no winner yet)
+    const fw = data.winner;
+    if(data.status==='gameover' && fw && fw!=='' && !wasOver){
+      gameOver = true;
+      endGame(fw);
     }
   });
 }
@@ -723,11 +738,15 @@ function pushToFirebase(isOver,winner) {
   if(!roomRef||!window._fbFns) return;
   const {update}=window._fbFns;
   const nextPlayer=isOver?curPlayer:(curPlayer==='X'?'O':'X');
+  // Convert board array to keyed object so Firebase preserves null slots
+  // (Firebase strips null values from arrays, turning them into sparse objects)
+  const boardObj={};
+  for(let i=0;i<9;i++) boardObj[i]=board[i]===null?'':board[i];
   update(roomRef,{
-    board,
+    board:boardObj,
     curPlayer:nextPlayer,
     gameOver:isOver,
-    winner:winner,
+    winner:winner||'',
     status:isOver?'gameover':'playing'
   });
 }
@@ -791,7 +810,8 @@ function playAgain() {
   document.getElementById('winner-display').style.display='none';
   if(gameMode==='online'&&onlineRole==='host'&&roomRef){
     const {update}=window._fbFns;
-    update(roomRef,{board:Array(9).fill(null),curPlayer:'X',gameOver:false,winner:null,status:'playing'});
+    const emptyBoard={0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:'',8:''};
+    update(roomRef,{board:emptyBoard,curPlayer:'X',gameOver:false,winner:'',status:'playing'});
   }
   renderBoard(); updatePlayerBar();
 }
